@@ -10,6 +10,8 @@
 #include <complex.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #ifndef VT_HEXDUMP_COLOR
 #define VT_HEXDUMP_COLOR(fmt, vt_hexdump_hex)                                  \
@@ -28,77 +30,83 @@
 #endif /* VT_HEXDUMP_COLOR */
 
 #define VT_TITLE(PTR, SIZE)                                                    \
-        size_t t_ptr_size = SIZE;                                              \
-        unsigned char *t_realptr = (unsigned char *)PTR;                       \
-        printf("================= VT_HEXDUMP =================\n");            \
-        printf("file\t\t: %s:%d\n", __FILE__, __LINE__);                       \
-        printf("func\t\t: %s\n", __FUNCTION__);                                \
-        printf("addr\t\t: 0x%016lx\n", t_realptr);                             \
-        printf("dump_size\t: %ld\n\n", t_ptr_size);
+        do {                                                                   \
+                size_t t_ptr_size = SIZE;                                      \
+                unsigned char *t_realptr = (unsigned char *)PTR;               \
+                printf("================= VT_HEXDUMP =================\n");    \
+                printf("file\t\t: %s:%d\n", __FILE__, __LINE__);               \
+                printf("func\t\t: %s\n", __FUNCTION__);                        \
+                printf("addr\t\t: 0x%016lx\n", t_realptr);                     \
+                printf("dump_size\t: %ld\n\n", t_ptr_size);                    \
+        } while (0);
 
 #ifndef HEXDUMP
 #define HEXDUMP(PTR, SIZE)                                                     \
-        size_t ptr_size = SIZE;                                                \
-        unsigned char *realptr = (unsigned char *)PTR;                         \
-        unsigned int initial_counter = 0;                                      \
+        do {                                                                   \
+                size_t ptr_size = SIZE;                                        \
+                unsigned char *realptr = (unsigned char *)PTR;                 \
+                unsigned int initial_counter = 0;                              \
                                                                                \
-        int n_loop = (ptr_size / 16) + 1;                                      \
-        if (ptr_size % 16 == 0) {                                              \
-                n_loop = n_loop - 1;                                           \
-        }                                                                      \
-                                                                               \
-        for (int x = 0; x < 75; x++) {                                         \
-                if (x >= 40) {                                                 \
-                        printf("16 BYTES WIDE\n");                             \
-                        break;                                                 \
-                } else {                                                       \
-                        printf(" ");                                           \
+                int n_loop = (ptr_size / 16) + 1;                              \
+                if (ptr_size % 16 == 0) {                                      \
+                        n_loop = n_loop - 1;                                   \
                 }                                                              \
-        }                                                                      \
                                                                                \
-        for (int x = 0; x < 75; x++) {                                         \
-                if (x >= 21 && x <= 73) {                                      \
-                        printf("_");                                           \
-                } else {                                                       \
-                        printf(" ");                                           \
-                }                                                              \
-        }                                                                      \
-        printf("\n");                                                          \
-                                                                               \
-        for (int i = 0; i < n_loop; i++) {                                     \
-                printf("|0x%016lx|", (uintptr_t)(realptr));                    \
-                                                                               \
-                for (int i = 0; i < 16; i++) {                                 \
-                        if (i % 4 == 0 && i != 0) {                            \
-                                printf("  ");                                  \
-                        }                                                      \
-                        if (i != 15) {                                         \
-                                if (initial_counter <= ptr_size) {             \
-                                        VT_HEXDUMP_COLOR(" %02x", realptr[i]); \
-                                }                                              \
+                for (int x = 0; x < 75; x++) {                                 \
+                        if (x >= 40) {                                         \
+                                printf("16 BYTES WIDE\n");                     \
+                                break;                                         \
                         } else {                                               \
-                                printf(" %02x ", realptr[i]);                  \
+                                printf(" ");                                   \
                         }                                                      \
                 }                                                              \
                                                                                \
-                printf(" | ");                                                 \
-                for (int i = 0; i < 16; i++) {                                 \
-                        if (initial_counter <= ptr_size - 1) {                 \
-                                if (realptr[i] >= 32 && realptr[i] <= 126) {   \
-                                        printf("%c", realptr[i]);              \
-                                } else {                                       \
-                                        printf(".", realptr[i]);               \
-                                }                                              \
+                for (int x = 0; x < 75; x++) {                                 \
+                        if (x >= 21 && x <= 73) {                              \
+                                printf("_");                                   \
                         } else {                                               \
-                                printf(".");                                   \
+                                printf(" ");                                   \
                         }                                                      \
-                        initial_counter = initial_counter + 1;                 \
                 }                                                              \
-                printf(" | ");                                                 \
-                                                                               \
                 printf("\n");                                                  \
-                realptr = realptr + 16;                                        \
-        }
+                                                                               \
+                for (int i = 0; i < n_loop; i++) {                             \
+                        printf("|0x%016lx|", (uintptr_t)(realptr));            \
+                                                                               \
+                        for (int i = 0; i < 16; i++) {                         \
+                                if (i % 4 == 0 && i != 0) {                    \
+                                        printf("  ");                          \
+                                }                                              \
+                                if (i != 15) {                                 \
+                                        if (initial_counter <= ptr_size) {     \
+                                                VT_HEXDUMP_COLOR(" %02x",      \
+                                                                 realptr[i]);  \
+                                        }                                      \
+                                } else {                                       \
+                                        printf(" %02x ", realptr[i]);          \
+                                }                                              \
+                        }                                                      \
+                                                                               \
+                        printf(" | ");                                         \
+                        for (int i = 0; i < 16; i++) {                         \
+                                if (initial_counter <= ptr_size - 1) {         \
+                                        if (realptr[i] >= 32 &&                \
+                                            realptr[i] <= 126) {               \
+                                                printf("%c", realptr[i]);      \
+                                        } else {                               \
+                                                printf(".", realptr[i]);       \
+                                        }                                      \
+                                } else {                                       \
+                                        printf(".");                           \
+                                }                                              \
+                                initial_counter = initial_counter + 1;         \
+                        }                                                      \
+                        printf(" | ");                                         \
+                                                                               \
+                        printf("\n");                                          \
+                        realptr = realptr + 16;                                \
+                }                                                              \
+        } while (0)
 #endif
 
 #ifndef VT_HEXDUMP
