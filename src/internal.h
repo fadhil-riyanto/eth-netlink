@@ -7,4 +7,8 @@
 #	define EXPORT_SYMBOL
 #endif
 
+#ifndef INTERNAL_FUNC
+#       define INTERNAL_SYMBOL __attribute__ ((visibility ("hidden")))
+#endif
+
 #endif
