@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <libmnl/libmnl.h>
+#include "../submodule/log.c/src/log.h"
 
 /**
  * \defgroup ETH Netlink program
@@ -60,14 +61,15 @@ void show_general_help(void) {
  * note that mode hold some important `bitfield` value
  * 
  * bit 0 : `--list-interface` is set\n
- * bit 1 : has `--interface`, and `iif_value` is set\n
+ * bit 1 : has `--interface`, and `phydev` is set\n
  * bit 2 : has `--info` flag set
  * bit 3 : has `--help` flag set
  * 
  */
 struct ctx { 
         unsigned long int       mode;
-        char                    *iif_value;
+        char                    *phydev;
+        struct mnl_socket       *nl;
 };
 
 /**
@@ -76,6 +78,7 @@ struct ctx {
  */
 EXPORT_SYMBOL struct ctx* init_all_memctx() {
         struct ctx* ctx = (struct ctx*)malloc(sizeof(struct ctx));
+        memset(ctx, 0, sizeof(struct ctx));
         return ctx;
 }
 
@@ -103,6 +106,7 @@ EXPORT_SYMBOL void parse_opt(int argc, char *argv[], struct ctx* ctx) {
 
                         case 0x1:
                         ctx->mode = ctx->mode | ARG_COMMAND_INTERFACE;
+                        ctx->phydev = optarg;
                         break;
 
                         
@@ -129,25 +133,54 @@ EXPORT_SYMBOL void destroy_all_memctx(struct ctx* ctx) {
         free(ctx);
 }
 
+void eth_netlink_openconnecion(struct ctx* ctx) {
+        ctx->nl = mnl_socket_open(NETLINK_GENERIC);
+        if (ctx->nl == NULL) {
+		perror("mnl_socket_open, errno: ");
+	}
+}
+
+int eth_netlink_closeconnecion(struct ctx* ctx) {
+        int retq = mnl_socket_close(ctx->nl);
+        if (ctx->nl == NULL) {
+		perror("mnl_socket_close");
+		return -1;
+	}
+
+        return retq;
+}
+
+
+
 /**
  * \fn void eth_netlink_main(struct ctx* ctx)
  * \brief this func acs as second main function, this is where all netlink
  * message get composed
  */
-EXPORT_SYMBOL void eth_netlink_main(struct ctx* ctx) {
+EXPORT_SYMBOL int eth_netlink_main(struct ctx* ctx) 
+{
+        int retq = 0;
+
+        
+        if (ctx->mode == (ARG_COMMAND_HELP)) {
+                show_general_help();
+                return retq;
+        }
+
+        /* first, set nl up */
+        eth_netlink_openconnecion(ctx);
+        
         if (ctx->mode == ARG_COMMAND_LIST_INTERFACE) {
                 printf("EXECUTING LIST INTERFACE");
         }
 
         if (ctx->mode == (ARG_COMMAND_INTERFACE | ARG_COMMAND_INFO)) {
-                printf("EXECUTING info INTERFACE");
+                log_info("executing info on interface %s", ctx->phydev);
         }
 
-        if (ctx->mode == (ARG_COMMAND_HELP)) {
-                show_general_help();
-        }
-
+        eth_netlink_closeconnecion(ctx);
         
+        return retq;
 }
 
 /**
@@ -155,6 +188,7 @@ EXPORT_SYMBOL void eth_netlink_main(struct ctx* ctx) {
  * this func return allocated memory of struct ctx
  */
 EXPORT_SYMBOL int main(int argc, char *argv[]) {
+        int retq = 0;
         if (argc == 1) {
                 show_general_help();
                 return -1;
@@ -165,7 +199,7 @@ EXPORT_SYMBOL int main(int argc, char *argv[]) {
         parse_opt(argc, argv, ctx);
 
         // VT_BITFIELD_DUMP(ctx->mode);
-        eth_netlink_main(ctx);
+        retq = eth_netlink_main(ctx);
 
         destroy_all_memctx(ctx);
 }
