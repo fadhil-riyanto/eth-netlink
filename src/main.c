@@ -87,7 +87,8 @@ struct raw_buff {
 /**
  * \struct eth_netlink_dbuf
  * \brief this struct used as more parameter that being pass onto
- * `mnl_run_cb`, the function that uses this struct is `eth_netlink_phydev_cb`
+ * `mnl_run_cb`, the function that uses this struct is `eth_netlink_phydev_cb` and 
+ * `eth_netlink_parse_nlattr`
  * 
  */
 struct eth_netlink_dbuf {
@@ -195,7 +196,7 @@ int rtnl_close(struct ctx *ctx)
 
 INTERNAL_SYMBOL void *__nlattr_next(void *buf)
 {
-        struct nlattr* cur_nlattr = (struct nlattr*)buf;
+	struct nlattr *cur_nlattr = (struct nlattr *)buf;
 	unsigned int len = cur_nlattr->nla_len;
 	return cur_nlattr + len;
 }
@@ -212,6 +213,16 @@ INTERNAL_SYMBOL void *__nlattr_getpayload(struct nlattr *cur_nlattr)
 	return buf;
 }
 
+// int (*)(const struct nlattr *, void *)
+int eth_netlink_parse_nlattr(const struct nlattr *nlattr, void *data)
+{
+	if (mnl_attr_get_type(nlattr) == IFLA_IFNAME) {
+		char *phy = mnl_attr_get_payload(nlattr);
+		printf("iface: %s\n", phy);
+		// free(phy);
+	}
+}
+
 /** \fn eth_netlink_phydev_cb(const struct nlmsghdr *nl, void *data)
  * \brief this func parse the message from kernel, the message that we parse is\n
  * ifinfomsg - for device information
@@ -219,31 +230,27 @@ INTERNAL_SYMBOL void *__nlattr_getpayload(struct nlattr *cur_nlattr)
  */
 int eth_netlink_phydev_cb(const struct nlmsghdr *nl, void *data)
 {
-        size_t ifinfomsgsz = sizeof(struct ifinfomsg);
+	size_t ifinfomsgsz = sizeof(struct ifinfomsg);
 
 	struct eth_netlink_dbuf *dbuf = data;
-	void *buf = mnl_nlmsg_get_payload(nl);
-        void *real_nlattr = buf + ifinfomsgsz;
+	struct nlattr *buf = mnl_nlmsg_get_payload_offset(nl, ifinfomsgsz);
+	mnl_attr_parse(nl, ifinfomsgsz, eth_netlink_parse_nlattr, NULL);
 
-	unsigned int real_nlmsg_len =
-		mnl_nlmsg_get_payload_len(nl) - ifinfomsgsz;
+	// // /* keep raw pointer in mind */
+	// // unsigned long x = ((void*)phydev_lists + 16);
 
-        // /* keep raw pointer in mind */
-	// unsigned long x = ((void*)phydev_lists + 16);
+	// unsigned int nlattr_n = real_nlmsg_len / sizeof(struct nlattr);
 
-	unsigned int nlattr_n = real_nlmsg_len / sizeof(struct nlattr);
+	// for (int i = 0; i < nlattr_n; i++) {
+	// 	if (mnl_attr_get_type(buf) == IFLA_IFNAME) {
+	// 		char *phy = mnl_attr_get_payload(buf);
+	// 		printf("%s\n", phy);
+	// 		// free(phy);
+	// 	}
 
-        VT_HEXDUMP(real_nlattr, 16 * 4);
-
-	for (int i = 0; i < nlattr_n; i++) {
-		if (mnl_attr_get_type(real_nlattr) == IFLA_IFNAME) {
-			char *phy = mnl_attr_get_payload(real_nlattr);
-			printf("%s\n", phy);
-			// free(phy);
-		}
-
-                real_nlattr = (void*)mnl_attr_next(real_nlattr);
-	}
+	// 	// VT_HEXDUMP(buf, 16 * 4);
+	// 	buf = (void *)mnl_attr_next(buf);
+	// }
 
 	// printf("\nInterface name: %s",
 	//        if_indextoname(phydev_lists->ifi_index, "wlan0"));
@@ -331,7 +338,7 @@ EXPORT_SYMBOL int eth_netlink_main(struct ctx *ctx)
 	/* first, set nl up */
 
 	if (ctx->mode == ARG_COMMAND_LIST_INTERFACE) {
-		printf("EXECUTING LIST INTERFACE");
+		printf("Gathering interface data... pleas wait\n\n");
 		rtnl_open(ctx, NETLINK_ROUTE);
 
 		/* dump ethernet interface */
