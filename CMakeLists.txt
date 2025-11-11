@@ -14,7 +14,12 @@ add_library(logc
         ./submodule/log.c/src/log.c
 )
 
-add_executable(ethnetlink ./src/main.c)
+add_executable(ethnetlink 
+        ./src/main.c
+        ./src/netlink.c
+        ./src/link.c
+)
+target_include_directories(ethnetlink PRIVATE ./include)
 target_link_libraries(
         ethnetlink logc mnl
 )

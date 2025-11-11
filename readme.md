@@ -9,6 +9,9 @@ iproute2, and some various subsystems.
 
 I create this to learn how that software works under the hood.
 
-main 
+# TL;DR
+
+THE ethnetlink will be same as iproute2, and ethtool
+
 # License
 GNU GPLv2

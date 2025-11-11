@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (C) Fadhil Riyanto <fadhil.riyanto@gnuweeb.org>
+ * Copyright (C) Fadhil Riyanto <me@fadev.org>
  *
  * this version is inspired by Ammar Faizi's versions
  * ref:
