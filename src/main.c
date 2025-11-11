@@ -41,6 +41,7 @@ struct option opt[] = { { "list-interfaces", no_argument, 0, 0x0 },
 			{ "info", no_argument, 0, 0x2 },
 			{ "help", no_argument, 0, 0x3 },
 			{ "i", no_argument, 0, 0x4 },
+			{ "license", no_argument, 0, 0x5 },
 
 			{ 0, 0, 0, 0 } };
 
@@ -49,12 +50,32 @@ struct option opt[] = { { "list-interfaces", no_argument, 0, 0x0 },
  */
 void show_general_help(void)
 {
-	printf("eth-netlink v\n" ETH_NETLINK_VERSION
-	       "(c) 2025 Fadhil Riyanto\n");
-	printf("  build with gcc\n\n");
+	printf("eth-netlink v" ETH_NETLINK_VERSION
+	       " (c) 2025 Fadhil Riyanto\n");
+	printf("  build with gcc %d.%d.%d\n\n", __GNUC__, __GNUC_MINOR__,
+	       __GNUC_PATCHLEVEL__);
 	printf("Print help / information:\n");
 	printf("--list-interface\t\tshow an interface lists\n");
-	printf("--interface --i\t\t\tset a target interface");
+	printf("--interface|--i\t\t\tset a target interface\n");
+	printf("--license\t\t\tDisplay the license/warranty terms of this program.");
+}
+
+void show_license(void)
+{
+	printf("Copyright 2025 Fadhil Riyanto (me@fadev.org)\n\n");
+
+	printf("This program is free software; you can redistribute it and/or modify it\n");
+	printf("under the terms of the GNU General Public License as published by the Free\n");
+	printf("Software Foundation; either version 2 of the License, or (at your option)\n");
+	printf("any later version.\n\n");
+
+	printf("This program is distributed in the hope that it will be useful, but\n");
+	printf("WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY\n");
+	printf("or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License\n");
+	printf("for more details.\n\n");
+
+	printf("You should have received a copy of the GNU General Public License\n");
+	printf("along with this program.  If not, see <https://www.gnu.org/licenses/>.\n");
 }
 
 /**
@@ -85,13 +106,13 @@ struct raw_buff {
 };
 
 /**
- * \struct eth_netlink_dbuf
+ * \struct eth_netlink_cbdata
  * \brief this struct used as more parameter that being pass onto
  * `mnl_run_cb`, the function that uses this struct is `eth_netlink_phydev_cb` and 
  * `eth_netlink_parse_nlattr`
  * 
  */
-struct eth_netlink_dbuf {
+struct eth_netlink_cbdata {
 	int interface_counter;
 };
 
@@ -144,6 +165,10 @@ EXPORT_SYMBOL void parse_opt(int argc, char *argv[], struct ctx *ctx)
 
 		case 0x4:
 			ctx->mode = ctx->mode | ARG_COMMAND_INTERFACE;
+			break;
+
+		case 0x5:
+			ctx->mode = ctx->mode | ARG_COMMAND_LICENSE;
 			break;
 		}
 	}
@@ -216,11 +241,19 @@ INTERNAL_SYMBOL void *__nlattr_getpayload(struct nlattr *cur_nlattr)
 // int (*)(const struct nlattr *, void *)
 int eth_netlink_parse_nlattr(const struct nlattr *nlattr, void *data)
 {
+	struct eth_netlink_cbdata *cb;
+
+	cb = (struct eth_netlink_cbdata *)data;
+
 	if (mnl_attr_get_type(nlattr) == IFLA_IFNAME) {
 		char *phy = mnl_attr_get_payload(nlattr);
-		printf("iface: %s\n", phy);
-		// free(phy);
+		printf("iface %d: %s\n", cb->interface_counter, phy);
+		cb->interface_counter = cb->interface_counter + 1;
 	}
+
+	
+
+	return MNL_CB_OK;
 }
 
 /** \fn eth_netlink_phydev_cb(const struct nlmsghdr *nl, void *data)
@@ -232,9 +265,10 @@ int eth_netlink_phydev_cb(const struct nlmsghdr *nl, void *data)
 {
 	size_t ifinfomsgsz = sizeof(struct ifinfomsg);
 
-	struct eth_netlink_dbuf *dbuf = data;
+	// struct eth_netlink_dbuf *dbuf = data;
 	struct nlattr *buf = mnl_nlmsg_get_payload_offset(nl, ifinfomsgsz);
-	mnl_attr_parse(nl, ifinfomsgsz, eth_netlink_parse_nlattr, NULL);
+
+	mnl_attr_parse(nl, ifinfomsgsz, eth_netlink_parse_nlattr, data);
 
 	// // /* keep raw pointer in mind */
 	// // unsigned long x = ((void*)phydev_lists + 16);
@@ -302,17 +336,17 @@ struct raw_buff eth_netlink_dump_phy(struct mnl_socket *nl)
 
 	ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
 
-	struct eth_netlink_dbuf dbuf;
-	dbuf.interface_counter = 0;
+	struct eth_netlink_cbdata cbdata = { 
+		.interface_counter = 1 
+	};
 
 	while (ret > 0) {
 		ret = mnl_cb_run(buf, ret, seq, portid, eth_netlink_phydev_cb,
-				 &dbuf);
+				 &cbdata);
 
 		if (ret <= 0)
 			break;
 		ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
-		dbuf.interface_counter = dbuf.interface_counter + 1;
 	}
 	// int n = 0;
 	// do {
@@ -335,10 +369,14 @@ EXPORT_SYMBOL int eth_netlink_main(struct ctx *ctx)
 		return retq;
 	}
 
+	if (ctx->mode == ARG_COMMAND_LICENSE) {
+		show_license();
+	}
+
 	/* first, set nl up */
 
 	if (ctx->mode == ARG_COMMAND_LIST_INTERFACE) {
-		printf("Gathering interface data... pleas wait\n\n");
+		printf("Gathering interface data... please wait\n\n");
 		rtnl_open(ctx, NETLINK_ROUTE);
 
 		/* dump ethernet interface */
