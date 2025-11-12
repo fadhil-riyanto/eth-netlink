@@ -18,8 +18,18 @@ add_executable(ethnetlink
         ./src/main.c
         ./src/netlink.c
         ./src/link.c
+        ./src/print.c
+        
 )
 target_include_directories(ethnetlink PRIVATE ./include)
 target_link_libraries(
         ethnetlink logc mnl
 )
+
+# testing 
+add_executable(test_pr_func
+        ./test/pr_func.c
+        ./src/print.c
+)
+target_include_directories(test_pr_func PRIVATE ./include)
+add_test(NAME test_pr_func COMMAND ./test_pr_func)
