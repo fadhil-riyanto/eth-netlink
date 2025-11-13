@@ -1,3 +1,6 @@
 [submodule "submodule/log.c"]
 	path = submodule/log.c
 	url = https://github.com/rxi/log.c.git
+[submodule "submodule/inih"]
+	path = submodule/inih
+	url = https://github.com/benhoyt/inih.git
