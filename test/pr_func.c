@@ -2,5 +2,5 @@
 
 int main() {
         char* a = "error: ";
-        __pr_err();
+        __pr_emerg("aaaa");
 }
