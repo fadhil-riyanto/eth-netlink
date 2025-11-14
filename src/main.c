@@ -3,12 +3,13 @@
  * Copyright (C) 2025
  * Fadhil Riyanto <me@fadev.org> 
  */
- 
+
 #include "main.h"
 #include "netlink.h"
 #include "link.h"
 
 #include "../submodule/log.c/src/log.h"
+#include "../submodule/inih/ini.h"
 #include "internal.h"
 #include "vt_bitfield.h"
 #include "vt_hexdump.h"
@@ -82,9 +83,6 @@ void show_license(void)
 	printf("along with this program.  If not, see <https://www.gnu.org/licenses/>.\n");
 }
 
-
-
-
 /**
  * \fn struct ctx* init_all_memctx()
  * \brief this func return allocated memory of struct ctx
@@ -157,7 +155,7 @@ EXPORT_SYMBOL void destroy_all_memctx(struct ctx *ctx)
  * \brief this func acs as second main function, this is where all netlink
  * message get composed
  */
-EXPORT_SYMBOL int eth_netlink_main(struct ctx *ctx)
+static EXPORT_SYMBOL int eth_netlink_main(struct ctx *ctx)
 {
 	int retq = 0;
 
@@ -190,12 +188,34 @@ EXPORT_SYMBOL int eth_netlink_main(struct ctx *ctx)
 	return retq;
 }
 
+static int parse_ini(void *user, const char *section, const char *name,
+		     const char *value)
+{
+	struct ini_params *pconfig = (struct ini_params *)user;
+	if (INI_MATCH("logging", "debug_mode")) {
+		pconfig->debug_mode = strcmp(value, "true") == 0 ? 1 : 0;
+	} else if (INI_MATCH("logging", "send_to_syslog")) {
+		pconfig->send_to_syslog = strcmp(value, "true") == 0 ? 1 : 0;
+	} else {
+		return 0; /* unknown section/name, error */
+	}
+
+	return 1;
+}
+
 /**
  * static struct ctx* init_all_memctx()
  * this func return allocated memory of struct ctx
  */
-EXPORT_SYMBOL int main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
+	struct ini_params pconfig;
+
+	if (ini_parse("/etc/ethnetlink/ethnetlink.ini", parse_ini, &pconfig) < 0) {
+		printf("Can't load '/etc/ethnetlink/ethnetlink.ini'\n");
+		return 1;
+	}
+
 	int retq = 0;
 	if (argc == 1) {
 		show_general_help();
@@ -206,7 +226,9 @@ EXPORT_SYMBOL int main(int argc, char *argv[])
 
 	parse_opt(argc, argv, ctx);
 
-	// VT_BITFIELD_DUMP(ctx->mode);
+	if (pconfig.debug_mode == 1)
+		VT_BITFIELD_DUMP(ctx->mode);
+
 	retq = eth_netlink_main(ctx);
 
 	destroy_all_memctx(ctx);

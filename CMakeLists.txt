@@ -10,8 +10,9 @@ find_package(mnl)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(logc 
+add_library(submodule 
         ./submodule/log.c/src/log.c
+        ./submodule/inih/ini.c
 )
 
 add_executable(ethnetlink 
@@ -23,13 +24,26 @@ add_executable(ethnetlink
 )
 target_include_directories(ethnetlink PRIVATE ./include)
 target_link_libraries(
-        ethnetlink logc mnl
+        ethnetlink submodule mnl
 )
 
 # testing 
 add_executable(test_pr_func
-        ./test/pr_func.c
         ./src/print.c
+        ./test/pr_func.c
 )
 target_include_directories(test_pr_func PRIVATE ./include)
 add_test(NAME test_pr_func COMMAND ./test_pr_func)
+
+
+
+# rule make install
+
+install(
+        TARGETS ethnetlink
+        DESTINATION /usr/bin
+)
+install(
+        FILES ./conf/ethnetlink.ini
+        DESTINATION /etc/ethnetlink
+)

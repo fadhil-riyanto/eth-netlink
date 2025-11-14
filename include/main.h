@@ -7,16 +7,19 @@
 #ifndef _MAIN_H_
 #define _MAIN_H_
 
+#include <sys/types.h>
 #define ETH_NETLINK_VERSION "0.01"
+
+#define INI_MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
 
 /**
  * the definition that hold getopt params, we use 64 bit unsigned.
  */
-#define ARG_COMMAND_LIST_INTERFACE      0x1 << 0
-#define ARG_COMMAND_INTERFACE           0x1 << 1
-#define ARG_COMMAND_INFO                0x1 << 2
-#define ARG_COMMAND_HELP                0x1 << 3
-#define ARG_COMMAND_LICENSE             0x1 << 4
+#define ARG_COMMAND_LIST_INTERFACE 0x1 << 0
+#define ARG_COMMAND_INTERFACE 0x1 << 1
+#define ARG_COMMAND_INFO 0x1 << 2
+#define ARG_COMMAND_HELP 0x1 << 3
+#define ARG_COMMAND_LICENSE 0x1 << 4
 
 /**
  * \struct ctx
@@ -56,8 +59,15 @@ struct eth_netlink_cbdata {
 	int interface_counter;
 };
 
-struct ctx* init_all_memctx();
+struct ini_params {
+	u_int8_t send_to_syslog;
+	u_int8_t debug_mode;
+};
+
+struct ctx *init_all_memctx();
 void parse_opt(int argc, char *argv[], struct ctx *ctx);
+static int parse_ini(void *user, const char *section, const char *name,
+		      const char *value);
 void destroy_all_memctx(struct ctx *ctx);
 
 #endif
