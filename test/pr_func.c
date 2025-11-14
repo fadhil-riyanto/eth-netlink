@@ -1,6 +1,8 @@
 #include "print.h"
+#include <stdio.h>
 
 int main() {
         char* a = "error: ";
-        __pr_emerg("aaaa");
+        pr_emerg("aaaa");
+        // printf("x");
 }
