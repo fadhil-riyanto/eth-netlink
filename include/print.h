@@ -5,9 +5,39 @@
 #include <stdarg.h>
 #include <sys/types.h>
 
+// #define SEND_TO_SYSLOG
+
+#define __setup_syslog() \
+	openlog("ethnetlink", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+
+#define __close_syslog() \
+	closelog();
+
+#ifdef SEND_TO_SYSLOG
+# include <syslog.h>
+#  define SYSLOG_CTOR								\
+	__setup_syslog()
+
+#  define SEND_SYSLOG(BUF)							\
+	syslog(LOG_NOTICE, BUF);						\
+
+#  define SYSLOG_DTOR								\
+	__close_syslog()
+#else
+# define __NOP __asm__ volatile ("nop")
+#  define SYSLOG_CTOR __NOP;
+#  define SEND_SYSLOG(BUF) __NOP;
+#  define SYSLOG_DTOR __NOP;
+
+#endif /* SEND_TO_SYSLOG */
+
+
 #if defined(__linux__) && defined(__unix__)
 #include <pthread.h>
 	static pthread_mutex_t print_fast_mu = PTHREAD_MUTEX_INITIALIZER;
+#  ifdef SEND_TO_SYSLOG
+	
+#  endif /* SEND_TO_SYSLOG */
 #endif
 
 #define DEFINE_HDR_PR_FUNCTION(NAME) 			\
@@ -18,6 +48,8 @@
 	{                                                                   \
 		pthread_mutex_lock(&print_fast_mu);                         \
                                                                             \
+		SYSLOG_CTOR						    \
+									    \
 		int charoffset = 0;                                         \
 		va_list ap;                                                 \
 		char buf[32];                                               \
@@ -39,9 +71,13 @@
 						    ap);                    \
                                                                             \
 		fwrite(vbuf, sizeof(char), charoffset, stdout);             \
+		SEND_SYSLOG(vbuf)					    \
                                                                             \
 		va_end(ap);                                                 \
-		pthread_mutex_unlock(&print_fast_mu);                         \
+                                                                            \
+		SYSLOG_DTOR						    \
+									    \
+		pthread_mutex_unlock(&print_fast_mu);                       \
 	}
 
 int __get_time_str(char *buf, size_t n);
