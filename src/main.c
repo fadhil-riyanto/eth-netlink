@@ -47,6 +47,7 @@ struct option opt[] = { { "list-interfaces", no_argument, 0, 0x0 },
 			{ "help", no_argument, 0, 0x3 },
 			{ "i", no_argument, 0, 0x4 },
 			{ "license", no_argument, 0, 0x5 },
+			{ "details", no_argument, 0, 0x6 },
 
 			{ 0, 0, 0, 0 } };
 
@@ -137,6 +138,12 @@ EXPORT_SYMBOL void parse_opt(int argc, char *argv[], struct ctx *ctx)
 		case 0x5:
 			ctx->mode = ctx->mode | ARG_COMMAND_LICENSE;
 			break;
+
+		case 0x6:
+			ctx->mode = ctx->mode | ARG_COMMAND_DETAILS;
+			break;
+
+		
 		}
 	}
 }
@@ -170,14 +177,14 @@ static EXPORT_SYMBOL int eth_netlink_main(struct ctx *ctx)
 
 	/* first, set nl up */
 
-	if (ctx->mode == ARG_COMMAND_LIST_INTERFACE) {
+	if ((ctx->mode & ARG_COMMAND_LIST_INTERFACE) == 1) {
 		printf("Gathering interface data... please wait\n\n");
 		rtnl_open(ctx, NETLINK_ROUTE);
 
 		/* dump ethernet interface */
 		char *buf;
 
-		struct raw_buff rb = eth_nl_link_dump_phy(ctx->nl);
+		struct raw_buff rb = eth_nl_link_dump_phy(ctx);
 		rtnl_close(ctx);
 	}
 
@@ -196,6 +203,8 @@ static int parse_ini(void *user, const char *section, const char *name,
 		pconfig->debug_mode = strcmp(value, "true") == 0 ? 1 : 0;
 	} else if (INI_MATCH("logging", "send_to_syslog")) {
 		pconfig->send_to_syslog = strcmp(value, "true") == 0 ? 1 : 0;
+	} else if (INI_MATCH("logging", "debug_show_bitfields")) {
+		pconfig->debug_show_bitfields = strcmp(value, "true") == 0 ? 1 : 0;
 	} else {
 		return 0; /* unknown section/name, error */
 	}
@@ -226,7 +235,7 @@ int main(int argc, char *argv[])
 
 	parse_opt(argc, argv, ctx);
 
-	if (pconfig.debug_mode == 1)
+	if (pconfig.debug_show_bitfields == 1)
 		VT_BITFIELD_DUMP(ctx->mode);
 
 	retq = eth_netlink_main(ctx);

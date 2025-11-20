@@ -11,7 +11,7 @@
 #include <libmnl/libmnl.h>
 #include "main.h"
 
-struct raw_buff eth_nl_link_dump_phy(struct mnl_socket *nl);
+struct raw_buff eth_nl_link_dump_phy(struct ctx *ctx);
 int eth_nl_link_parse_nlattr(const struct nlattr *nlattr, void *data);
 int eth_nl_link_dump_cb(const struct nlmsghdr *nl, void *data);
 

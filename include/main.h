@@ -20,6 +20,8 @@
 #define ARG_COMMAND_INFO 0x1 << 2
 #define ARG_COMMAND_HELP 0x1 << 3
 #define ARG_COMMAND_LICENSE 0x1 << 4
+#define ARG_COMMAND_DETAILS 0x1 << 5
+
 
 /**
  * \struct ctx
@@ -57,11 +59,13 @@ struct raw_buff {
  */
 struct eth_netlink_cbdata {
 	int interface_counter;
+	struct ctx *ctx;
 };
 
 struct ini_params {
 	u_int8_t send_to_syslog;
 	u_int8_t debug_mode;
+	u_int8_t debug_show_bitfields;
 };
 
 struct ctx *init_all_memctx();
